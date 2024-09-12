@@ -1,14 +1,10 @@
 import cv2
 import mediapipe as mp
 import pyautogui
-import time
 
 # MediaPipe ve OpenCV ayarları
 mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
-
-# Ekran çözünürlüğünü alıyoruz
-screen_width, screen_height = pyautogui.size()
 
 # Video dosyasını alıyoruz
 video_path = 'videos/ornek-video.mp4'  # Video dosyanızın yolunu girin
@@ -18,12 +14,9 @@ if not cap.isOpened():
     print("Video dosyası açılamadı.")
     exit()
 
-# Fareyi manuel ve burunla kontrol etmek için son fare konumu
-prev_mouse_x, prev_mouse_y = pyautogui.position()
-last_move_time = time.time()
-
-# Hareket hızını kontrol etmek için bir adım boyutu belirliyoruz
-movement_speed = 10  # Yüksek hızda smooth geçiş için artırılabilir
+# Burun ucu başlangıç değerleri
+prev_nose_x = None
+prev_nose_y = None
 
 # FaceMesh'i başlatıyoruz
 with mp_face_mesh.FaceMesh(
@@ -37,9 +30,6 @@ with mp_face_mesh.FaceMesh(
         if not ret:
             print("Video bitti.")
             break
-
-        # Video çözünürlüğünü düşürerek performansı artırabiliriz
-        frame = cv2.resize(frame, (640, 360))
 
         # OpenCV için BGR'den RGB'ye dönüşüm
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -59,20 +49,27 @@ with mp_face_mesh.FaceMesh(
                 nose_x = int(nose_tip.x * frame_width)
                 nose_y = int(nose_tip.y * frame_height)
 
-                # Ekrandaki hedef konumu hesaplıyoruz
-                screen_x = screen_width * (nose_x / frame_width)
-                screen_y = screen_height * (nose_y / frame_height)
+                # İlk çerçeve için burun ucunun başlangıç pozisyonunu kaydediyoruz
+                if prev_nose_x is None and prev_nose_y is None:
+                    prev_nose_x, prev_nose_y = nose_x, nose_y
+
+                # Burnun hareketine göre fareyi mevcut konumundan hareket ettiriyoruz
+                # Burun ucundaki değişiklikleri fareye uygulayacağız
+                delta_x = nose_x - prev_nose_x
+                delta_y = nose_y - prev_nose_y
 
                 # Şu anki fare konumunu alıyoruz
                 current_mouse_x, current_mouse_y = pyautogui.position()
 
-                # Fareyi burun ucunun hedef pozisyonuna doğru smooth hareket ettiriyoruz
-                # Hareket hızına göre fareyi adım adım taşıyoruz
-                new_mouse_x = current_mouse_x + (screen_x - current_mouse_x) / movement_speed
-                new_mouse_y = current_mouse_y + (screen_y - current_mouse_y) / movement_speed
+                # Fareyi göreceli hareket ettiriyoruz (mevcut konuma delta ekliyoruz)
+                new_mouse_x = current_mouse_x + delta_x
+                new_mouse_y = current_mouse_y + delta_y
 
-                # Fareyi smooth bir şekilde yeni pozisyona taşı
+                # Fareyi yeni pozisyona taşı
                 pyautogui.moveTo(new_mouse_x, new_mouse_y)
+
+                # Burun ucunun önceki pozisyonlarını güncelliyoruz
+                prev_nose_x, prev_nose_y = nose_x, nose_y
 
                 # İsteğe bağlı: Anahtar noktayı ekrana çiziyoruz (daha küçük boyutlar)
                 mp_drawing.draw_landmarks(
@@ -83,7 +80,7 @@ with mp_face_mesh.FaceMesh(
                     mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=1))  # İnce çizgiler
 
         # Kameradan gelen görüntüyü ekranda gösteriyoruz
-        cv2.imshow('Yüz Takip', frame)
+        cv2.imshow('face2cursor', frame)
 
         # 'q' tuşuna basılınca döngüyü sonlandır
         if cv2.waitKey(1) & 0xFF == ord('q'):
