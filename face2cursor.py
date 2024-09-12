@@ -22,6 +22,9 @@ if not cap.isOpened():
 prev_mouse_x, prev_mouse_y = pyautogui.position()
 last_move_time = time.time()
 
+# Hareket hızını kontrol etmek için bir adım boyutu belirliyoruz
+movement_speed = 10  # Yüksek hızda smooth geçiş için artırılabilir
+
 # FaceMesh'i başlatıyoruz
 with mp_face_mesh.FaceMesh(
         max_num_faces=1,  # Yalnızca bir yüzü takip edeceğiz
@@ -56,16 +59,22 @@ with mp_face_mesh.FaceMesh(
                 nose_x = int(nose_tip.x * frame_width)
                 nose_y = int(nose_tip.y * frame_height)
 
-                # Fareyi ekrandaki konuma göre hareket ettiriyoruz (her 0.1 saniyede bir)
-                if time.time() - last_move_time > 0.1:
-                    screen_x = screen_width * (nose_x / frame_width)
-                    screen_y = screen_height * (nose_y / frame_height)
+                # Ekrandaki hedef konumu hesaplıyoruz
+                screen_x = screen_width * (nose_x / frame_width)
+                screen_y = screen_height * (nose_y / frame_height)
 
-                    # Farenin hareket etmesine izin verelim, ancak küçük aralıklarla
-                    pyautogui.moveTo(screen_x, screen_y)
-                    last_move_time = time.time()
+                # Şu anki fare konumunu alıyoruz
+                current_mouse_x, current_mouse_y = pyautogui.position()
 
-                # Anahtar noktaları ve çizgileri küçültüyoruz
+                # Fareyi burun ucunun hedef pozisyonuna doğru smooth hareket ettiriyoruz
+                # Hareket hızına göre fareyi adım adım taşıyoruz
+                new_mouse_x = current_mouse_x + (screen_x - current_mouse_x) / movement_speed
+                new_mouse_y = current_mouse_y + (screen_y - current_mouse_y) / movement_speed
+
+                # Fareyi smooth bir şekilde yeni pozisyona taşı
+                pyautogui.moveTo(new_mouse_x, new_mouse_y)
+
+                # İsteğe bağlı: Anahtar noktayı ekrana çiziyoruz (daha küçük boyutlar)
                 mp_drawing.draw_landmarks(
                     frame,
                     face_landmarks,
