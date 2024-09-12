@@ -2,91 +2,93 @@ import cv2
 import mediapipe as mp
 import pyautogui
 
-# MediaPipe ve OpenCV ayarları
+# MediaPipe and OpenCV setup
 mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 
-# Video dosyasını alıyoruz (webcam kullanıyoruz)
+# Open the webcam
 cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
-    print("Video dosyası açılamadı.")
+    print("Failed to open video capture.")
     exit()
 
-# Burun ucu başlangıç değerleri
+# Initial nose tip position
 prev_nose_x = None
 prev_nose_y = None
 
-# FaceMesh'i başlatıyoruz
+# Sensitivity multiplier (increase to make mouse move faster)
+SENSITIVITY = 1.5  # Increase this value to make the cursor move faster
+
+# Start the FaceMesh
 with mp_face_mesh.FaceMesh(
-        max_num_faces=1,  # Yalnızca bir yüzü takip edeceğiz
+        max_num_faces=1,
         refine_landmarks=True,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5) as face_mesh:
 
     while True:
-        ret, frame = cap.read()  # Videodan bir kare okuyoruz
+        ret, frame = cap.read()
         if not ret:
-            print("Video bitti.")
+            print("Video ended.")
             break
 
-        # Görüntüyü aynalamak için flip işlemi yapıyoruz
-        frame = cv2.flip(frame, 1)  # Yatay eksende görüntüyü çeviriyoruz
+        # Mirror the image
+        frame = cv2.flip(frame, 1)
 
-        # OpenCV için BGR'den RGB'ye dönüşüm
+        # Convert BGR to RGB
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Yüzü işleyip anahtar noktaları alıyoruz
+        # Process the face and get landmarks
         results = face_mesh.process(rgb_frame)
 
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
-                # Burun ucunun konumunu alıyoruz (landmark index: 1)
+                # Get the nose tip (landmark index: 1)
                 nose_tip = face_landmarks.landmark[1]
 
-                # Kare boyutlarını alıyoruz
+                # Get frame dimensions
                 frame_height, frame_width, _ = frame.shape
 
-                # Burun ucunun X ve Y koordinatlarını çerçeveye göre hesaplıyoruz
+                # Calculate nose coordinates
                 nose_x = int(nose_tip.x * frame_width)
                 nose_y = int(nose_tip.y * frame_height)
 
-                # İlk çerçeve için burun ucunun başlangıç pozisyonunu kaydediyoruz
+                # Save the initial nose tip position
                 if prev_nose_x is None and prev_nose_y is None:
                     prev_nose_x, prev_nose_y = nose_x, nose_y
 
-                # Burnun hareketine göre fareyi mevcut konumundan hareket ettiriyoruz
-                delta_x = nose_x - prev_nose_x
-                delta_y = nose_y - prev_nose_y
+                # Calculate movement (with sensitivity adjustment)
+                delta_x = (nose_x - prev_nose_x) * SENSITIVITY
+                delta_y = (nose_y - prev_nose_y) * SENSITIVITY
 
-                # Şu anki fare konumunu alıyoruz
+                # Get current mouse position
                 current_mouse_x, current_mouse_y = pyautogui.position()
 
-                # Fareyi göreceli hareket ettiriyoruz (mevcut konuma delta ekliyoruz)
+                # Move the mouse to the new position
                 new_mouse_x = current_mouse_x + delta_x
                 new_mouse_y = current_mouse_y + delta_y
 
-                # Fareyi yeni pozisyona taşı
                 pyautogui.moveTo(new_mouse_x, new_mouse_y)
 
-                # Burun ucunun önceki pozisyonlarını güncelliyoruz
+                # Update the previous nose position
                 prev_nose_x, prev_nose_y = nose_x, nose_y
 
-                # İsteğe bağlı: Anahtar noktayı ekrana çiziyoruz (daha küçük boyutlar)
+                # Optionally draw the face mesh (for debugging)
                 mp_drawing.draw_landmarks(
                     frame,
                     face_landmarks,
                     mp_face_mesh.FACEMESH_TESSELATION,
-                    mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=1),  # Küçük noktalar
-                    mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=1))  # İnce çizgiler
+                    mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=1),
+                    mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=1))
 
-        # Kameradan gelen görüntüyü ekranda gösteriyoruz
-        cv2.imshow('face2cursor', frame)
+        # Remove the display window for full-screen support
+        # cv2.imshow('face2cursor', frame)
 
-        # 'q' tuşuna basılınca döngüyü sonlandır
+        # Exit on 'q' key press
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-# Kaynakları serbest bırakıyoruz
+# Release resources
 cap.release()
 cv2.destroyAllWindows()
