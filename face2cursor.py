@@ -6,9 +6,8 @@ import pyautogui
 mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 
-# Video dosyasını alıyoruz
-video_path = 'videos/ornek-video.mp4'  # Video dosyanızın yolunu girin
-cap = cv2.VideoCapture(video_path)
+# Video dosyasını alıyoruz (webcam kullanıyoruz)
+cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
     print("Video dosyası açılamadı.")
@@ -30,6 +29,9 @@ with mp_face_mesh.FaceMesh(
         if not ret:
             print("Video bitti.")
             break
+
+        # Görüntüyü aynalamak için flip işlemi yapıyoruz
+        frame = cv2.flip(frame, 1)  # Yatay eksende görüntüyü çeviriyoruz
 
         # OpenCV için BGR'den RGB'ye dönüşüm
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -54,7 +56,6 @@ with mp_face_mesh.FaceMesh(
                     prev_nose_x, prev_nose_y = nose_x, nose_y
 
                 # Burnun hareketine göre fareyi mevcut konumundan hareket ettiriyoruz
-                # Burun ucundaki değişiklikleri fareye uygulayacağız
                 delta_x = nose_x - prev_nose_x
                 delta_y = nose_y - prev_nose_y
 
