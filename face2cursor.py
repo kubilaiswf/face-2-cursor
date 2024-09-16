@@ -18,7 +18,7 @@ mp_drawing = mp.solutions.drawing_utils
 # pyautogui.FAILSAFE = False
 
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
 if not cap.isOpened():
@@ -119,7 +119,7 @@ def show_frame():
 
     if results.multi_face_landmarks:
         for face_landmarks in results.multi_face_landmarks:
-            nose_tip = face_landmarks.landmark[1]
+            nose_tip = face_landmarks.landmark[4]
             nose_x = int(nose_tip.x * frame_width)
             nose_y = int(nose_tip.y * frame_height)
 
@@ -145,24 +145,16 @@ def show_frame():
 
             pyautogui.moveTo(new_mouse_x, new_mouse_y)
 
+            left_eye_indices = [33, 160, 158, 133, 153, 144]
+            right_eye_indices = [362, 385, 387, 263, 373, 380]
+            nose_indices = [4]
+
+            # Eğer mirror image aktifse, göz landmarklarını tersine çevir
             if mirror_image.get():
-                left_eye_landmarks = [
-                    face_landmarks.landmark[33], face_landmarks.landmark[160], face_landmarks.landmark[158],
-                    face_landmarks.landmark[133], face_landmarks.landmark[153], face_landmarks.landmark[144]
-                ]
-                right_eye_landmarks = [
-                    face_landmarks.landmark[362], face_landmarks.landmark[385], face_landmarks.landmark[387],
-                    face_landmarks.landmark[263], face_landmarks.landmark[373], face_landmarks.landmark[380]
-                ]
-            else:
-                left_eye_landmarks = [
-                    face_landmarks.landmark[362], face_landmarks.landmark[385], face_landmarks.landmark[387],
-                    face_landmarks.landmark[263], face_landmarks.landmark[373], face_landmarks.landmark[380]
-                ]
-                right_eye_landmarks = [
-                    face_landmarks.landmark[33], face_landmarks.landmark[160], face_landmarks.landmark[158],
-                    face_landmarks.landmark[133], face_landmarks.landmark[153], face_landmarks.landmark[144]
-                ]
+                left_eye_indices, right_eye_indices = right_eye_indices, left_eye_indices
+
+            left_eye_landmarks = [face_landmarks.landmark[i] for i in left_eye_indices]
+            right_eye_landmarks = [face_landmarks.landmark[i] for i in right_eye_indices]
 
             left_eye_aspect_ratio = calculate_eye_aspect_ratio(left_eye_landmarks, frame_width, frame_height)
             right_eye_aspect_ratio = calculate_eye_aspect_ratio(right_eye_landmarks, frame_width, frame_height)
@@ -199,12 +191,18 @@ def show_frame():
                     elif right_eye_aspect_ratio >= blink_threshold:
                         blink_detected_right = False
 
-            mp_drawing.draw_landmarks(
-                frame,
-                face_landmarks,
-                mp_face_mesh.FACEMESH_TESSELATION,
-                mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=1),
-                mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=1))
+            # Belirtilen landmarkları çizme
+            for i in left_eye_indices:
+                landmark = face_landmarks.landmark[i]
+                cv2.circle(frame, (int(landmark.x * frame_width), int(landmark.y * frame_height)), 1, (70, 0, 130), -1)
+
+            for i in right_eye_indices:
+                landmark = face_landmarks.landmark[i]
+                cv2.circle(frame, (int(landmark.x * frame_width), int(landmark.y * frame_height)), 1, (70, 0, 130), -1)
+
+            for i in nose_indices:
+                landmark = face_landmarks.landmark[i]
+                cv2.circle(frame, (int(landmark.x * frame_width), int(landmark.y * frame_height)), 1, (255, 140, 0), -1)
 
     img_tk = convert_to_tk_image(frame)
     lbl_video.imgtk = img_tk
@@ -223,12 +221,12 @@ chk_mirror = Checkbutton(frame_controls, text=ui_texts["mirror"], variable=mirro
                          font=("Helvetica", 14))
 chk_mirror.pack(pady=5, padx=10)
 
-sensitivity_slider_x = Scale(frame_controls, from_=0.1, to=5.0, orient=HORIZONTAL, resolution=0.1,
+sensitivity_slider_x = Scale(frame_controls, from_=0.1, to=10.0, orient=HORIZONTAL, resolution=0.1,
                              label=ui_texts["sensitivity_x"], command=update_sensitivity_x)
 sensitivity_slider_x.set(sensitivity_x)
 sensitivity_slider_x.pack(side=tk.LEFT, pady=5, padx=10)
 
-sensitivity_slider_y = Scale(frame_controls, from_=0.1, to=5.0, orient=HORIZONTAL, resolution=0.1,
+sensitivity_slider_y = Scale(frame_controls, from_=0.1, to=10.0, orient=HORIZONTAL, resolution=0.1,
                              label=ui_texts["sensitivity_y"], command=update_sensitivity_y)
 sensitivity_slider_y.set(sensitivity_y)
 sensitivity_slider_y.pack(side=tk.LEFT, pady=5, padx=10)
