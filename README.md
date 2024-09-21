@@ -22,7 +22,7 @@ This project implements a facial expression-based cursor control system using Op
 
     Ensure you have Python 3.7 or later installed. Then install the required packages:
     ```bash
-    pip install opencv-python mediapipe pyautogui pillow numpy scipy
+    pip install opencv-python mediapipe pyautogui pillow numpy scipy customtkinter
     ```
 
 ## Usage
@@ -62,11 +62,25 @@ def calculate_eye_aspect_ratio(eye_landmarks, frame_width, frame_height):
 
 Blinks are detected by comparing the EAR with a predefined threshold:
 ```python
-if left_eye_aspect_ratio < blink_threshold and not blink_detected_left:
-    blink_detected_left = True
-    pyautogui.click()
-elif left_eye_aspect_ratio >= blink_threshold:
-    blink_detected_left = False
+def check_blink(left_eye_aspect_ratio, right_eye_aspect_ratio, blink_eye):
+    global blink_detected_left, blink_detected_right
+
+    if left_eye_aspect_ratio < blink_threshold and right_eye_aspect_ratio < blink_threshold:
+        blink_detected_left = False
+        blink_detected_right = False
+    else:
+        if blink_eye.get() == 1:
+            if left_eye_aspect_ratio < blink_threshold and not blink_detected_left:
+                blink_detected_left = True
+                pyautogui.click()
+            elif left_eye_aspect_ratio >= blink_threshold:
+                blink_detected_left = False
+        else:
+            if right_eye_aspect_ratio < blink_threshold and not blink_detected_right:
+                blink_detected_right = True
+                pyautogui.click()
+            elif right_eye_aspect_ratio >= blink_threshold:
+                blink_detected_right = False
 ```
 
 ## Dependencies
@@ -90,7 +104,7 @@ Feel free to submit issues or pull requests. For major changes, please open an i
 
 ## License
 
-This project is licensed under the Apache License 2.0. See the LICENSE file for details.
+This project is licensed under the Apache 2.0 License. See the LICENSE file for details.
 
 ## Contact
 
